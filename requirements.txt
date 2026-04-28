@@ -2,3 +2,6 @@ mkdocs==1.6.1
 mkdocs-material==9.7.6
 mkdocs-awesome-pages-plugin==2.10.1
 pymdown-extensions==10.21.2
+
+# 数据清洗（_tools/clean.py 用，部署不需要但本地清洗需要）
+zhconv==1.4.3

@@ -10,6 +10,12 @@ import re
 import sys
 from pathlib import Path
 
+try:
+    import zhconv
+except ImportError:
+    zhconv = None
+    print("[!] 未装 zhconv，不做繁→简转换。pip install zhconv")
+
 ROOT = Path(__file__).resolve().parent.parent
 SAMPLES_OUT = Path(__file__).resolve().parent / "samples_out"
 
@@ -514,6 +520,69 @@ def restructure_awards_section(text: str) -> str:
     return section_re.sub(transform, text)
 
 
+def split_numbered_list(text: str) -> str:
+    """识别 "X.Y内容X+1.Y内容" 这种压扁的编号列表，转成 markdown 编号列表。
+
+    触发条件：段落内出现 ≥3 个 "数字." 标记且数字递增。
+    """
+    paragraphs = re.split(r"(\n\s*\n)", text)
+    result = []
+    for p in paragraphs:
+        if not p.strip() or len(p) < 50:
+            result.append(p)
+            continue
+        # 找所有 "数字." 位置（前面不是数字，避免 1.5/2.0 等小数）
+        markers = list(re.finditer(r"(?<!\d)(\d{1,2})\.(?=[一-龥])", p))
+        if len(markers) < 3:
+            result.append(p)
+            continue
+        # 检查数字递增
+        nums = [int(m.group(1)) for m in markers]
+        if not all(nums[i] < nums[i + 1] for i in range(len(nums) - 1)):
+            result.append(p)
+            continue
+        # 拆分
+        prefix = p[: markers[0].start()].rstrip()
+        items = []
+        for i, m in enumerate(markers):
+            end = markers[i + 1].start() if i + 1 < len(markers) else len(p)
+            content = p[m.end() : end].strip()
+            items.append(f"{m.group(1)}. {content}")
+        result.append(prefix + "\n\n" + "\n".join(items))
+    return "".join(result)
+
+
+def split_huashen_list(text: str) -> str:
+    """化身列表：'第N个化身：XX' 重复模式 → bullet 列表。"""
+
+    def transform(p):
+        markers = list(
+            re.finditer(
+                r"第([一二三四五六七八九十百千万]+|\d+)个化身[:：]",
+                p,
+            )
+        )
+        if len(markers) < 2:
+            return p
+        prefix = p[: markers[0].start()].rstrip()
+        items = []
+        for i, m in enumerate(markers):
+            end = markers[i + 1].start() if i + 1 < len(markers) else len(p)
+            content = p[m.end() : end].strip()
+            items.append(f"- **第{m.group(1)}个化身**：{content}")
+        return prefix + "\n\n" + "\n".join(items)
+
+    paragraphs = re.split(r"(\n\s*\n)", text)
+    return "".join(p if not p.strip() else transform(p) for p in paragraphs)
+
+
+def to_simplified(text: str) -> str:
+    """繁体→简体（仅字符级，不动术语；保留 markdown 结构）。"""
+    if zhconv is None:
+        return text
+    return zhconv.convert(text, "zh-cn")
+
+
 def break_long_paragraphs(text: str) -> str:
     """对超过 300 字的纯文字段落，在句号 / 问号 / 感叹号后插入段落分隔。"""
     paragraphs = re.split(r"(\n\s*\n)", text)
@@ -584,6 +653,11 @@ def clean(text: str) -> str:
     text = restructure_music_section(text)
     text = restructure_battle_section(text)
     text = restructure_awards_section(text)
+    # 编号列表 / 化身列表 拆分
+    text = split_numbered_list(text)
+    text = split_huashen_list(text)
+    # 全文繁→简
+    text = to_simplified(text)
 
     # 整理空白
     text = re.sub(r"[ \t]+\n", "\n", text)
