@@ -465,13 +465,24 @@ body {
   padding-top: 0.5rem;
 }
 
-/* Edit button */
+/* Edit button (top-right pencil icon) */
 .md-content__button {
   color: var(--bdx-muted);
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  opacity: 0.45;
+  transition: opacity 0.15s, color 0.15s;
 }
 
 .md-content__button:hover {
   color: var(--bdx-charcoal);
+  opacity: 1;
+  background-color: transparent !important;
+}
+
+.md-content__button svg {
+  background-color: transparent !important;
 }
 
 /* ---------- Admonitions ---------- */
@@ -876,4 +887,104 @@ body {
   .md-typeset .bdx-faction__name {
     font-size: 1.3rem;
   }
+}
+
+/* ============================================================
+   Character page typography (pili K-V structure, hex swatches)
+   ============================================================ */
+
+/* Hex color swatch inline */
+.bdx-swatch {
+  display: inline-block;
+  width: 0.95em;
+  height: 0.95em;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+  vertical-align: -0.13em;
+  margin-right: 0.35em;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+}
+
+[data-md-color-scheme="slate"] .bdx-swatch {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* Faction landing page (index.md) - tile grid for character categories */
+.bdx-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.md-typeset .bdx-tile {
+  background-color: var(--bdx-cream-light);
+  border: 1px solid var(--bdx-border);
+  border-radius: 10px;
+  padding: 1.1rem 1.2rem;
+  font-size: 0.85rem;
+  line-height: 1.85;
+}
+
+.md-typeset .bdx-tile p {
+  margin: 0;
+}
+
+.md-typeset .bdx-tile p:first-child strong {
+  display: block;
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+  color: var(--bdx-muted);
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  text-transform: none;
+}
+
+.md-typeset .bdx-tile a {
+  color: var(--bdx-charcoal);
+  text-decoration: none;
+  font-weight: 500;
+  border-bottom: 1px solid transparent;
+  padding: 0.05rem 0;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.md-typeset .bdx-tile a:hover {
+  color: var(--bdx-pili);
+  border-bottom-color: var(--bdx-pili);
+}
+
+[data-md-color-scheme="slate"] .md-typeset .bdx-tile a {
+  color: var(--bdx-charcoal);
+}
+
+/* Character page: tighter spacing for K-V style content */
+.md-content__inner article > p > strong:first-child:last-child,
+.md-content__inner article > p:has(> strong:only-child) {
+  /* Standalone bold key paragraph: lighter weight + reduced spacing */
+  margin-top: 1rem;
+  margin-bottom: 0.2rem;
+}
+
+.md-content__inner article > p > strong {
+  color: var(--bdx-muted);
+  font-weight: 500;
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+}
+
+/* Tighter paragraph spacing on character pages (multi short K-V values) */
+.md-content__inner article > p {
+  margin: 0.4em 0;
+}
+
+/* Restore wider spacing around H2 to keep sections readable */
+.md-content__inner article > h2 {
+  margin-top: 2.5rem;
+}
+
+/* Source separator (=== rule lines) */
+.md-typeset hr,
+.md-typeset p > strong:only-child + br {
+  /* The 80-char === lines remain as <hr> equivalent via setext fallback */
 }

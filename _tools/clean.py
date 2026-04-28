@@ -89,11 +89,84 @@ def clean_body(text: str) -> str:
     return text
 
 
+# 已知小节标题（一行单独出现的结构性标题，将提升为 H2）
+PILI_SECTIONS = [
+    "角色背景", "角色形象", "人物關係", "人物关系",
+    "招式", "招式技能", "武功", "武器", "兵器",
+    "角色經歷", "角色经历",
+    "口白選錄", "口白选录", "經典台詞", "经典台词",
+    "登場記錄", "登场记录",
+    "個性與外觀", "个性与外观",
+    "詩號", "诗号",
+    "備註", "备注",
+    "角色配樂", "角色配乐",
+    "角色榮譽", "角色荣誉",
+    "角色評價", "角色评价",
+    "技能專長", "技能专长",
+    "所持有物", "持有物",
+]
+
+# 已知键名字段（一行单独出现的元数据键名，加粗使其与值区分）
+PILI_KEYS = [
+    "性別", "性别",
+    "初登場", "初登场",
+    "退場", "退场", "暫退場", "暂退场", "再登場", "再登场",
+    "稱號", "称号", "別稱", "别称", "別名", "别名",
+    "來自", "来自",
+    "根據地", "根据地",
+    "代表顏色", "代表颜色",
+    "上司", "下屬", "下属",
+    "同伴", "友人", "朋友",
+    "敵人", "敌人", "宿敵", "宿敌",
+    "親屬", "亲属",
+    "妻子", "丈夫", "兒子", "儿子", "女兒", "女儿",
+    "父親", "父亲", "母親", "母亲", "兄弟", "姐妹",
+    "配音", "配音員", "配音员",
+    "兴趣爱好", "興趣愛好",
+    "所持有物", "持有物",
+    "口頭禪", "口头禅",
+    "事跡", "事迹",
+]
+
+
+def transform_structure(text: str) -> str:
+    """结构化转换：修复 hex 色码 H1 误识、提升小节标题、加粗键名。"""
+    # 1) 修复 #XXXXXX 行首被识别为 H1：转成色块 + 行内代码
+    text = re.sub(
+        r"(?m)^(#[0-9a-fA-F]{6})\s*$",
+        lambda m: (
+            f'<span class="bdx-swatch" style="background:{m.group(1)}"></span> '
+            f'`{m.group(1)}`'
+        ),
+        text,
+    )
+
+    # 2) 已知小节标题（独占一行）→ H2，前后加空行确保 markdown 识别
+    section_pattern = "|".join(re.escape(s) for s in PILI_SECTIONS)
+    text = re.sub(
+        rf"(?m)^({section_pattern})\s*$",
+        r"\n## \1\n",
+        text,
+    )
+
+    # 3) 已知键名（独占一行）→ **加粗**，与值在同一段落用一个空行隔开
+    key_pattern = "|".join(re.escape(k) for k in PILI_KEYS)
+    text = re.sub(
+        rf"(?m)^({key_pattern})\s*$",
+        r"\n**\1**\n",
+        text,
+    )
+
+    return text
+
+
 def clean(text: str) -> str:
     # 全局清理 baidu 元数据（包括合并文档里的）
     text = clean_baidu_metadata(text)
     # 全文走一遍 body 清洗
     text = clean_body(text)
+    # 结构化转换
+    text = transform_structure(text)
 
     # 整理空白
     text = re.sub(r"[ \t]+\n", "\n", text)

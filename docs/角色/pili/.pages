@@ -1,2 +1,4 @@
 title: 霹雳
-order_by: filename
+nav:
+  - 概览: index.md
+  - ...
