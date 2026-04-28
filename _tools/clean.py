@@ -292,6 +292,228 @@ def restructure_baidu_infobox(text: str) -> str:
     return text[:start_pos] + replacement + text[start_pos + len(block):]
 
 
+def restructure_music_section(text: str) -> str:
+    """配乐段：把 '歌名（场景）收录于《专辑》歌名2（...）收录于《专辑2》...' 拆成列表。
+
+    只处理 ## 角色配乐 / ## 人物配乐 / ## 配乐 段落内的内容。
+    """
+    music_section_re = re.compile(
+        r"(##\s*(?:角色配乐|人物配乐|配乐|角色配樂|人物配樂|配樂)\s*\n)([\s\S]+?)(?=\n## |\n=={3,}|\Z)",
+    )
+
+    def transform(match):
+        header = match.group(1)
+        body = match.group(2)
+        # 找所有 "收录于《...》" 标记
+        entries_re = re.compile(r"收录于《([^》\n]+)》")
+        marks = list(entries_re.finditer(body))
+        if len(marks) < 2:
+            return match.group(0)  # 项太少不转
+
+        items = []
+        last_end = 0
+        for m in marks:
+            prefix = body[last_end : m.start()].strip(" 　\n、，；,;")
+            album = m.group(1).strip()
+            # 从 prefix 中分离 歌名 和 (场景)
+            sm = re.match(r"^(.+?)(?:[（(]([^）)]+)[）)])\s*$", prefix)
+            if sm:
+                song, scene = sm.group(1).strip(), sm.group(2).strip()
+            else:
+                song, scene = prefix, None
+            if not song:
+                continue
+            if scene:
+                items.append(f"- **{song}**（{scene}）— 《{album}》")
+            else:
+                items.append(f"- **{song}** — 《{album}》")
+            last_end = m.end()
+
+        if not items:
+            return match.group(0)
+
+        trailing = body[last_end:].strip()
+        result = header + "\n" + "\n".join(items) + "\n"
+        if trailing:
+            result += "\n" + trailing + "\n"
+        return result
+
+    return music_section_re.sub(transform, text)
+
+
+SHOW_NAME_RE = re.compile(
+    r"(霹雳[一-鿿]{1,18}|"
+    r"霹靂[一-鿿]{1,18}|"
+    r"金光御九界之[一-鿿]{2,10}|"
+    r"天地风云录之[一-鿿]{2,10}|"
+    r"天地風雲錄之[一-鿿]{2,10}|"
+    r"黑白龙狼传|黑白龍狼傳|"
+    r"东离剑游纪[一-鿿]{0,10}|"
+    r"東離劍遊紀[一-鿿]{0,10}|"
+    r"金光布袋戏[一-鿿]{0,10}|"
+    r"圣魔战印[一-鿿]{0,10})"
+)
+
+
+def restructure_battle_section(text: str) -> str:
+    """对战记录段：检测 '剧名章数敌方对战地点胜败战斗详情XX...' 转成 markdown 表格。"""
+    battle_section_re = re.compile(
+        r"(##\s*(?:对战记录|對戰記錄|战斗记录|戰鬥記錄)\s*\n)([\s\S]+?)(?=\n## |\n=={3,}|\Z)",
+    )
+    header_marker = "章数敌方对战地点胜败战斗详情"
+    header_marker_tw = "章數敵方對戰地點勝敗戰鬥詳情"
+
+    def find_last_show(text_part):
+        matches = list(SHOW_NAME_RE.finditer(text_part))
+        return matches[-1] if matches else None
+
+    def transform(match):
+        section_header = match.group(1)
+        body = match.group(2)
+
+        pat = re.compile(rf"({re.escape(header_marker)}|{re.escape(header_marker_tw)})")
+        parts = pat.split(body)
+        # parts: [pre, header, post, header, post, ...]
+        # pre 含第一剧名；每个 post = rows for current + 下一剧名（除最后）
+        if len(parts) < 3:
+            return match.group(0)
+
+        # 第一剧名：从 pre 最末位置反查
+        first = find_last_show(parts[0])
+        if not first:
+            return match.group(0)
+
+        current_show = first.group(0)
+        sub_tables = []  # list of (show_name, rows_text)
+
+        for i in range(2, len(parts), 2):
+            post = parts[i]
+            is_last = i == len(parts) - 1
+
+            if is_last:
+                rows_text = post
+                next_show = None
+            else:
+                last_show_m = find_last_show(post)
+                if last_show_m:
+                    rows_text = post[: last_show_m.start()]
+                    next_show = last_show_m.group(0)
+                else:
+                    rows_text = post
+                    next_show = None
+
+            sub_tables.append((current_show, rows_text))
+            if next_show:
+                current_show = next_show
+
+        # Render
+        result = [section_header]
+        rendered_any = False
+        for sname, rtext in sub_tables:
+            rows = parse_battle_rows(rtext)
+            if not rows or not sname:
+                continue
+            result.append(f"\n### {sname}\n")
+            result.append("| 章 | 对手 / 地点 | 结果 | 战斗详情 |")
+            result.append("|---|---|---|---|")
+            for ch, opp, st, detail in rows:
+                detail = detail.replace("\n", " ").replace("|", "\\|").strip()
+                opp = opp.replace("|", "\\|").strip()
+                result.append(f"| {ch} | {opp} | {st} | {detail} |")
+            rendered_any = True
+
+        if not rendered_any:
+            return match.group(0)
+        return "\n".join(result) + "\n"
+
+    return battle_section_re.sub(transform, text)
+
+
+def parse_battle_rows(content: str):
+    """解析对战记录行：'01敌方/地点[胜|败|平|无]战斗详情'."""
+    if not content.strip():
+        return []
+    rows = []
+    # 按行处理（已经在 break_long_paragraphs 阶段断了句）
+    # 同时合并跨行的 row（如果某行不以数字开头，是上一行的延续）
+    lines = [l.strip() for l in content.split("\n") if l.strip()]
+    current_row = None
+    for line in lines:
+        m = re.match(r"^(\d{1,3})(.+)$", line)
+        if m:
+            # 新行
+            if current_row:
+                rows.append(current_row)
+            ch = m.group(1)
+            rest = m.group(2)
+            # 拆 状态: 找 胜|败|平|无 (只取最早出现的，避免误拆详情中的字)
+            sm = re.match(r"^(.+?)(胜|败|平|无)(.+)$", rest)
+            if sm:
+                opp = sm.group(1).strip()
+                st = sm.group(2)
+                detail = sm.group(3).strip()
+            else:
+                opp = rest
+                st = ""
+                detail = ""
+            current_row = (ch, opp, st, detail)
+        else:
+            # 续行：内容追加给详情字段
+            if current_row:
+                ch, opp, st, det = current_row
+                # 如果有状态，追加到 detail；否则尝试在 line 中找状态
+                if st:
+                    current_row = (ch, opp, st, (det + " " + line).strip())
+                else:
+                    sm = re.match(r"^(.+?)(胜|败|平|无)(.+)$", line)
+                    if sm:
+                        opp = (opp + sm.group(1)).strip()
+                        st = sm.group(2)
+                        detail = sm.group(3).strip()
+                        current_row = (ch, opp, st, detail)
+                    else:
+                        current_row = (ch, (opp + " " + line).strip(), st, det)
+    if current_row:
+        rows.append(current_row)
+    return rows
+
+
+def restructure_awards_section(text: str) -> str:
+    """奖项/榜单段：在已知行起始标记前插换行变 bullet 列表。
+
+    各 sub-table 列结构不一致（票选有票数/名次，金像奖有奖项/类型/备注），
+    不强行造表格；改为每行独立 bullet，可读且不会拆错列。
+    """
+    section_re = re.compile(
+        r"(##\s*(?:奖项荣誉|獎項榮譽|奖项|獎項|荣誉|榮譽)\s*\n)([\s\S]+?)(?=\n## |\n=={3,}|\Z)",
+    )
+
+    row_re = re.compile(
+        r"("
+        r"月刊\d{1,4}期|"
+        r"电子会刊\d{1,4}期|"
+        r"霹雳官网|霹靂官網|"
+        r"金光官网|金光官網|"
+        r"东离官网|東離官網|"
+        r"霹雳会PILIFAN|霹雳会\d{4}|"
+        r"第\d+届霹雳[一-龥]+奖|"
+        r"\d{4}年度[一-龥]+奖"
+        r")"
+    )
+
+    def transform(m):
+        header = m.group(1)
+        body = m.group(2)
+        # 主办方/来源 起独立段（也作为 sub-section 边界）
+        body = re.sub(r"(\*?\s*主办方[：:])", r"\n\n\1", body)
+        body = re.sub(r"(\*?\s*來源[：:]|\*?\s*来源[：:])", r"\n\n\1", body)
+        # 行起始标记前插换行 + bullet
+        body = row_re.sub(r"\n\n- \1", body)
+        return header + body
+
+    return section_re.sub(transform, text)
+
+
 def break_long_paragraphs(text: str) -> str:
     """对超过 300 字的纯文字段落，在句号 / 问号 / 感叹号后插入段落分隔。"""
     paragraphs = re.split(r"(\n\s*\n)", text)
@@ -358,6 +580,10 @@ def clean(text: str) -> str:
     text = transform_structure(text)
     # 长段落按句号分行
     text = break_long_paragraphs(text)
+    # 配乐段、对战记录段、奖项段：转表格/列表
+    text = restructure_music_section(text)
+    text = restructure_battle_section(text)
+    text = restructure_awards_section(text)
 
     # 整理空白
     text = re.sub(r"[ \t]+\n", "\n", text)
