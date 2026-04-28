@@ -554,10 +554,7 @@ body {
   --bdx-dongli: #9aa9c8;
 }
 
-/* Hide the auto-generated H1 row on the index page */
-.md-content article > h1:first-child {
-  display: none;
-}
+/* (旧规则会把所有页面的 H1 隐藏，已删除；首页本身没有自动 H1) */
 
 /* ---------- Hero ---------- */
 .bdx-hero {
@@ -634,6 +631,7 @@ body {
   color: rgba(28, 28, 28, 0.75);
   max-width: 40rem;
   margin: 0 auto 2rem;
+  text-align: center;
 }
 
 [data-md-color-scheme="slate"] .bdx-hero__lede {
@@ -793,19 +791,24 @@ body {
 
 .md-typeset .bdx-faction__chips {
   list-style: none !important;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin: 0;
-  padding: 0;
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  gap: 0.4rem !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  align-items: flex-start;
 }
 
 .md-typeset .bdx-faction__chips li {
   list-style: none !important;
+  display: inline-flex !important;
+  flex: 0 0 auto !important;
+  width: auto !important;
   margin: 0 !important;
-  padding: 0;
-  background: transparent;
-  border: none;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
 }
 
 .md-typeset .bdx-faction__chips li::before,
