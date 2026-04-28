@@ -696,16 +696,13 @@ body {
   border: 1px solid var(--bdx-border);
   border-radius: 14px;
   padding: 1.6rem 1.5rem 1.4rem;
-  text-decoration: none !important;
   color: var(--bdx-charcoal);
   overflow: hidden;
-  transition: border-color 0.18s, transform 0.18s, box-shadow 0.18s;
+  transition: border-color 0.18s;
 }
 
 .md-typeset .bdx-faction:hover {
   border-color: var(--bdx-border-strong);
-  transform: translateY(-2px);
-  box-shadow: rgba(0, 0, 0, 0.08) 0 8px 24px;
 }
 
 .bdx-faction__bar {
@@ -759,6 +756,22 @@ body {
   padding-bottom: 0;
 }
 
+.md-typeset .bdx-faction__name a {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: none;
+}
+
+.md-typeset .bdx-faction__name a:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.2em;
+}
+
+.bdx-faction--pili     .bdx-faction__name a:hover { text-decoration-color: var(--bdx-pili); }
+.bdx-faction--jinguang .bdx-faction__name a:hover { text-decoration-color: var(--bdx-jinguang); }
+.bdx-faction--dongli   .bdx-faction__name a:hover { text-decoration-color: var(--bdx-dongli); }
+
 .md-typeset .bdx-faction__sub {
   font-size: 0.78rem;
   color: var(--bdx-muted);
@@ -779,7 +792,7 @@ body {
 }
 
 .md-typeset .bdx-faction__chips {
-  list-style: none;
+  list-style: none !important;
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
@@ -788,31 +801,65 @@ body {
 }
 
 .md-typeset .bdx-faction__chips li {
+  list-style: none !important;
+  margin: 0 !important;
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+
+.md-typeset .bdx-faction__chips li::before,
+.md-typeset .bdx-faction__chips li::marker {
+  content: none !important;
+  display: none !important;
+}
+
+.md-typeset .bdx-faction__chips li a {
+  display: inline-block;
   font-size: 0.75rem;
-  padding: 0.22rem 0.65rem;
+  padding: 0.22rem 0.7rem;
   border-radius: 9999px;
   background-color: rgba(255, 255, 255, 0.7);
   border: 1px solid rgba(28, 28, 28, 0.08);
   color: var(--bdx-charcoal);
   white-space: nowrap;
-  transition: background-color 0.15s;
-  margin: 0;
+  text-decoration: none;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
 }
 
-[data-md-color-scheme="slate"] .md-typeset .bdx-faction__chips li {
+.md-typeset .bdx-faction__chips li a:hover {
+  background-color: rgba(255, 255, 255, 1);
+  border-color: rgba(28, 28, 28, 0.25);
+  text-decoration: none;
+}
+
+[data-md-color-scheme="slate"] .md-typeset .bdx-faction__chips li a {
   background-color: rgba(247, 244, 237, 0.06);
   border-color: rgba(247, 244, 237, 0.12);
+  color: var(--bdx-charcoal);
 }
 
-.md-typeset .bdx-faction__chips .bdx-chip-more {
+[data-md-color-scheme="slate"] .md-typeset .bdx-faction__chips li a:hover {
+  background-color: rgba(247, 244, 237, 0.12);
+  border-color: rgba(247, 244, 237, 0.3);
+}
+
+.md-typeset .bdx-faction__chips .bdx-chip-more a {
   background-color: transparent !important;
   border: none !important;
   font-weight: 500;
+  padding: 0.22rem 0.4rem;
 }
 
-.bdx-faction--pili     .bdx-chip-more { color: var(--bdx-pili); }
-.bdx-faction--jinguang .bdx-chip-more { color: var(--bdx-jinguang); }
-.bdx-faction--dongli   .bdx-chip-more { color: var(--bdx-dongli); }
+.bdx-faction--pili     .bdx-chip-more a { color: var(--bdx-pili); }
+.bdx-faction--jinguang .bdx-chip-more a { color: var(--bdx-jinguang); }
+.bdx-faction--dongli   .bdx-chip-more a { color: var(--bdx-dongli); }
+
+.md-typeset .bdx-faction__chips .bdx-chip-more a:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
 
 /* ---------- Info section ---------- */
 .bdx-info {

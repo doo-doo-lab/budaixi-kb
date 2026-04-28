@@ -34,7 +34,6 @@ theme:
     - search.share
     - toc.follow
     - content.code.copy
-    - content.action.edit
   icon:
     repo: fontawesome/brands/github
 
