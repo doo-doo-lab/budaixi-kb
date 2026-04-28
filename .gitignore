@@ -1,0 +1,35 @@
+# Build output
+site/
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+.venv/
+venv/
+env/
+.eggs/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Tools workspace
+_tools/samples_out/
+_tools/__pycache__/
+
+# Local
+*.local
+.env
+
+# 剧情整理版尚未收集完成，先排除；收集完成并清洗后移入 docs/剧情/
+剧情整理版/
