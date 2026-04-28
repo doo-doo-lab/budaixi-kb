@@ -583,6 +583,19 @@ def to_simplified(text: str) -> str:
     return zhconv.convert(text, "zh-cn")
 
 
+def dedupe_h1(text: str) -> str:
+    """去掉 H1 中的"X (X)"重复（zhconv 统一后简繁形相同导致）。
+
+    例：'# 一刀斋 (一刀斋)' → '# 一刀斋'
+    例：'# 君海棠 (君海棠)' → '# 君海棠'
+    """
+    return re.sub(
+        r"(?m)^# ([一-龥A-Za-z0-9·•・\-\.]+)\s*[（(]\s*\1\s*[)）]\s*$",
+        r"# \1",
+        text,
+    )
+
+
 def break_long_paragraphs(text: str) -> str:
     """对超过 300 字的纯文字段落，在句号 / 问号 / 感叹号后插入段落分隔。"""
     paragraphs = re.split(r"(\n\s*\n)", text)
@@ -658,6 +671,8 @@ def clean(text: str) -> str:
     text = split_huashen_list(text)
     # 全文繁→简
     text = to_simplified(text)
+    # 去重 H1 中的"X (X)"模式（繁简合并后产物）
+    text = dedupe_h1(text)
 
     # 整理空白
     text = re.sub(r"[ \t]+\n", "\n", text)

@@ -14,7 +14,7 @@ hide:
       为戏迷与研究者提供可检索、可链接的纯文字百科。
     </p>
     <div class="bdx-hero__stats">
-      <div class="bdx-stat"><strong>1,105</strong><span>角色</span></div>
+      <div class="bdx-stat"><strong>1,101</strong><span>角色</span></div>
       <div class="bdx-stat"><strong>3</strong><span>厂牌</span></div>
       <div class="bdx-stat"><strong>3.2 MB</strong><span>文字</span></div>
       <div class="bdx-stat"><strong>40+</strong><span>剧集横跨</span></div>
