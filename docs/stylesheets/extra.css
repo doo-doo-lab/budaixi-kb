@@ -1047,3 +1047,33 @@ body {
 .md-typeset p > strong:only-child + br {
   /* The 80-char === lines remain as <hr> equivalent via setext fallback */
 }
+
+/* ============================================================
+   补充来源段（## 【补充来源:XX】 / ## 同一角色别名文档合并）
+   降权显示：略小、灰一些、上下加 hr 间隔
+   ============================================================ */
+.md-typeset h2:has(+ * ),
+.md-typeset h2 {
+  /* default kept */
+}
+
+/* 紧跟 === 分隔条之后的 H2 视为补充来源块的开始 */
+.md-typeset h2 a[href^="http"],
+.md-typeset h2:contains("补充来源"),
+.md-typeset h2:contains("同一角色别名") {
+  font-size: 1rem;
+}
+
+/* 简单做法：含【】的 H2 按补充来源样式 */
+.md-typeset h2 {
+  /* keep default for normal H2 */
+}
+
+/* JS 不能改时用 attribute selector */
+[id*="补充来源"], [id*="同一角色别名"], [id*="suppl"] {
+  font-size: 1rem !important;
+  color: var(--bdx-muted) !important;
+  font-weight: 500 !important;
+  border-bottom-style: dashed !important;
+  margin-top: 2rem !important;
+}

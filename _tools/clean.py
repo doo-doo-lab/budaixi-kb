@@ -596,6 +596,29 @@ def dedupe_h1(text: str) -> str:
     )
 
 
+def demote_supplement_headers(text: str) -> str:
+    """把页面中部的"# 【补充来源:X】"和"# 万朔夜"等 H1 降为 H2。
+
+    一个页面应只有一个 H1（顶部角色名）。补充来源 / 别名合并段的 H1
+    会跟主标题撞大小，视觉上很丑。
+    """
+    # 第一个 H1（顶部）保留；后续所有 # 都降为 ##
+    lines = text.split("\n")
+    seen_first_h1 = False
+    out = []
+    for line in lines:
+        if re.match(r"^# [^#]", line):
+            if not seen_first_h1:
+                seen_first_h1 = True
+                out.append(line)
+            else:
+                # 降级
+                out.append("#" + line)  # # → ##
+        else:
+            out.append(line)
+    return "\n".join(out)
+
+
 def break_long_paragraphs(text: str) -> str:
     """对超过 300 字的纯文字段落，在句号 / 问号 / 感叹号后插入段落分隔。"""
     paragraphs = re.split(r"(\n\s*\n)", text)
@@ -673,6 +696,8 @@ def clean(text: str) -> str:
     text = to_simplified(text)
     # 去重 H1 中的"X (X)"模式（繁简合并后产物）
     text = dedupe_h1(text)
+    # 把页面中部的额外 H1（补充来源等）降为 H2
+    text = demote_supplement_headers(text)
 
     # 整理空白
     text = re.sub(r"[ \t]+\n", "\n", text)
