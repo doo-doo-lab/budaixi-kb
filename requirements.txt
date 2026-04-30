@@ -3,5 +3,8 @@ mkdocs-material==9.7.6
 mkdocs-awesome-pages-plugin==2.10.1
 pymdown-extensions==10.21.2
 
+# 中文搜索分词（mkdocs-material 自动检测，build 时用）
+jieba==0.42.1
+
 # 数据清洗（_tools/clean.py 用，部署不需要但本地清洗需要）
 zhconv==1.4.3
