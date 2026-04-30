@@ -9,10 +9,7 @@ hide:
   <div class="bdx-hero__inner">
     <p class="bdx-eyebrow">台湾布袋戏角色资料合辑</p>
     <h1 class="bdx-hero__title">霹雳 · 金光 · 东离</h1>
-    <p class="bdx-hero__lede">
-      汇编自百度百科、霹雳官网、东离官网及维基等公开资料，<br>
-      为戏迷与研究者提供可检索、可链接的纯文字百科。
-    </p>
+    <p class="bdx-hero__lede">汇编自百度百科、霹雳官网、东离官网及维基等公开资料，为戏迷与研究者提供可检索、可链接的纯文字百科。</p>
     <div class="bdx-hero__stats">
       <div class="bdx-stat"><strong>1,101</strong><span>角色</span></div>
       <div class="bdx-stat"><strong>3</strong><span>厂牌</span></div>
@@ -75,8 +72,8 @@ hide:
       <span class="bdx-faction__year">2016 — 至今</span>
       <span class="bdx-faction__count">51</span>
     </div>
-    <h2 class="bdx-faction__name"><a href="角色/dongli/">Thunderbolt Fantasy</a></h2>
-    <p class="bdx-faction__sub">东离剑游纪 · 霹雳 × 虚渊玄</p>
+    <h2 class="bdx-faction__name"><a href="角色/dongli/">东离剑游纪</a></h2>
+    <p class="bdx-faction__sub">Thunderbolt Fantasy · 霹雳 × 虚渊玄</p>
     <p class="bdx-faction__desc">霹雳与日方编剧虚渊玄合作的国际化布袋戏，三季加剧场版讲述西幽玄武剑传奇。</p>
     <ul class="bdx-faction__chips">
       <li><a href="角色/dongli/殇不患/">殇不患</a></li>

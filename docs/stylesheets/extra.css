@@ -590,6 +590,10 @@ body {
   max-width: 50rem;
   margin: 0 auto;
   text-align: center;
+  /* 用 flex 列把每一项垂直居中堆叠，水平 align-items center */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .bdx-eyebrow {
@@ -631,8 +635,12 @@ body {
   line-height: 1.7;
   color: rgba(28, 28, 28, 0.7);
   max-width: 36rem;
-  margin: 0 auto 1.5rem;
+  margin: 0 0 1.5rem;
   text-align: center;
+  /* 在 flex column 父容器里 align-items: center 已自动居中块；
+     这里再保险一次：宽度自适应内容 + auto margin */
+  width: auto;
+  align-self: center;
 }
 
 [data-md-color-scheme="slate"] .bdx-hero__lede {
