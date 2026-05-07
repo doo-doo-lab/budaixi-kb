@@ -414,8 +414,13 @@ def main():
         sys.exit(1)
 
     files = [target] if target.is_file() else list(target.rglob("*.md"))
-    # 跳过 index.md（手写的概览页，不要 AI 处理）
-    files = [f for f in files if f.name != "index.md" and f.name != ".pages"]
+    # 跳过 index.md / .pages / 备份目录里的文件
+    files = [
+        f for f in files
+        if f.name not in ("index.md", ".pages")
+        and ".pre_ai_backup" not in f.parts
+        and ".pre_merge_backup" not in f.parts
+    ]
 
     # 大小过滤
     if args.min_size > 0:
