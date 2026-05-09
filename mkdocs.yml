@@ -47,6 +47,9 @@ plugins:
       lang:
         - zh
         - en
+      # 中文场景调整 separator：不在中文字之间额外分词（依赖 jieba），
+      # 配合下方自定义 JS 限制查询最少 2 字，避免「吞」「魔」单字 token 干扰排序
+      separator: '[\s​\-,;:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
   - awesome-pages:
       strict: false
   - git-revision-date-localized:
