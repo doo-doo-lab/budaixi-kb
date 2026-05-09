@@ -2,7 +2,7 @@
 
 台湾布袋戏三大派系角色资料合辑，整理自百度百科、霹雳官网、东离官网及维基等公开资料。
 
-**在线浏览**：<https://akira17189-create.github.io/budaixi-kb/>
+**在线浏览**：<https://doo-doo-lab.github.io/budaixi-kb/>
 
 ## 内容概览
 
@@ -82,7 +82,7 @@ mkdocs build
 
 ## 版权说明
 
-文字内容版权归原作者及对应来源所有。本仓库仅作粉丝整理用途，不存放任何视频资源；如有侵权请提 [Issue](https://github.com/akira17189-create/budaixi-kb/issues)。
+文字内容版权归原作者及对应来源所有。本仓库仅作粉丝整理用途，不存放任何视频资源；如有侵权请提 [Issue](https://github.com/doo-doo-lab/budaixi-kb/issues)。
 
 代码部分（`_tools/`、`mkdocs.yml`、`docs/stylesheets/`）使用 MIT 协议；
 文档内容（`docs/角色/`）遵循各自来源的版权声明，转载请注明出处。

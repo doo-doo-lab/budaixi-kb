@@ -1,8 +1,8 @@
 site_name: 霹雳、金光&东离布袋戏百科
 site_description: 霹雳布袋戏、金光布袋戏、Thunderbolt Fantasy 东离剑游纪 角色与剧情资料库
-site_url: https://akira17189-create.github.io/budaixi-kb/
-repo_url: https://github.com/akira17189-create/budaixi-kb
-repo_name: akira17189-create/budaixi-kb
+site_url: https://doo-doo-lab.github.io/budaixi-kb/
+repo_url: https://github.com/doo-doo-lab/budaixi-kb
+repo_name: doo-doo-lab/budaixi-kb
 edit_uri: edit/main/docs/
 
 theme:
@@ -76,7 +76,7 @@ extra:
   generator: false
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/akira17189-create/budaixi-kb
+      link: https://github.com/doo-doo-lab/budaixi-kb
 
 copyright: |
   内容来自百度百科、霹雳官网、东离官网、维基百科等公开资料 ·

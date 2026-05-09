@@ -114,5 +114,5 @@ hide:
 
 <footer class="bdx-foot">
   本站仅作粉丝整理用途，不存放任何视频资源；所有文字内容版权归原作者及对应来源所有。<br>
-  发现错误？欢迎提 <a href="https://github.com/akira17189-create/budaixi-kb/issues">Issue</a> 或 PR。
+  发现错误？欢迎提 <a href="https://github.com/doo-doo-lab/budaixi-kb/issues">Issue</a> 或 PR。
 </footer>
