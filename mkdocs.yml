@@ -34,6 +34,8 @@ theme:
     - search.share
     - toc.follow
     - content.code.copy
+    - content.action.edit
+    - content.action.view
   icon:
     repo: fontawesome/brands/github
 
@@ -47,6 +49,12 @@ plugins:
         - en
   - awesome-pages:
       strict: false
+  - git-revision-date-localized:
+      type: iso_date
+      timezone: Asia/Shanghai
+      locale: zh
+      enable_creation_date: true
+      fallback_to_build_date: true
 
 # 不要把备份目录纳入站点
 exclude_docs: |
