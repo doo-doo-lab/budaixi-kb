@@ -32,6 +32,7 @@ _tools/.reformat_state.json
 _tools/.merge_state.json
 _tools/.baidu_scrape_state.json
 _tools/*.log
+_tools/lint_report.md
 
 # AI 整理留下的备份（保留本地，不进 git，不进网站）
 docs/**/.pre_ai_backup/
