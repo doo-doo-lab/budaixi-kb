@@ -62,6 +62,7 @@ plugins:
 exclude_docs: |
   .pre_ai_backup/
   .pre_merge_backup/
+  .pre_yaml_backup/
 
 markdown_extensions:
   - admonition
