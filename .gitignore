@@ -39,6 +39,7 @@ docs/**/.pre_ai_backup/
 docs/**/.pre_merge_backup/
 docs/**/.pre_yaml_backup/
 docs/**/.pre_b1_backup/
+docs/**/.pre_b2_backup/
 
 # Local
 *.local

@@ -4,7 +4,7 @@
 -#}
 {% if page and page.meta and page.meta["姓名"] %}
   {%- set m = page.meta -%}
-  {%- set scalar_fields = ["性别", "称号", "身份", "种族", "初登场", "退场", "根据地", "诗号", "配音", "出场集数", "本尊雕偶师", "编剧"] -%}
+  {%- set scalar_fields = ["性别", "外文名", "称号", "身份", "种族", "生日", "初登场", "退场", "根据地", "来自", "诗号", "配音", "出场集数", "本尊雕偶师", "编剧"] -%}
   {%- set list_fields = ["别名", "组织门派", "武学", "武器", "咒术", "所有物", "登场作品"] -%}
   <aside class="bdx-infobox">
     <div class="bdx-infobox__title">{{ m["姓名"] }}</div>

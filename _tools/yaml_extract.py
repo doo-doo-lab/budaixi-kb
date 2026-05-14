@@ -36,6 +36,7 @@ FIELD_MAP = {
     "性别": "性别",
     "初登场": "初登场",
     "根据地": "根据地",
+    "来自": "来自",
     "退场": "退场",
     "称号": "称号",
     "配音": "配音",
@@ -58,11 +59,28 @@ FIELD_MAP = {
     "上司": "_人际_上司",
     "同伙": "_人际_同伙",
     "部属": "_人际_部属",
+    "部署": "_人际_部属",   # 错别字变体
+    "随从": "_人际_部属",
     "兄弟": "_人际_兄弟",
     "姐妹": "_人际_姐妹",
     "师徒": "_人际_师徒",
     "仇敌": "_人际_仇敌",
+    "宿敌": "_人际_仇敌",
+    "对手": "_人际_仇敌",
     "其他": "_人际_其他",
+    "所发便当": "_人际_其他",
+    # 关系字段变体 → 人际子键（人名保留，只归类）
+    "父亲": "_人际_家人", "母亲": "_人际_家人", "妻子": "_人际_家人",
+    "丈夫": "_人际_家人", "儿子": "_人际_家人", "女儿": "_人际_家人",
+    "养父": "_人际_家人", "养母": "_人际_家人", "义父": "_人际_家人",
+    "义母": "_人际_家人", "祖父": "_人际_家人", "先祖": "_人际_家人",
+    "父": "_人际_家人", "母": "_人际_家人",
+    "师父": "_人际_师父", "师尊": "_人际_师父", "恩师": "_人际_师父",
+    "师": "_人际_师父", "师傅": "_人际_师父",
+    "徒弟": "_人际_徒弟", "弟子": "_人际_徒弟", "门徒": "_人际_徒弟",
+    "恋情": "_人际_恋情", "爱人": "_人际_恋情", "情人": "_人际_恋情",
+    "结义": "_人际_结义", "同修": "_人际_同门", "同门": "_人际_同门",
+    "合作": "_人际_合作",
 
     # Tier 5 - 组织
     "组织门派": "组织门派",
@@ -77,12 +95,15 @@ FIELD_MAP = {
     "角色编剧": "编剧",  # 合并
     "出场集数": "出场集数",
 
+    # dongli 特有，保留为真字段
+    "生日": "生日",
+    "外文名": "外文名",
+
     # 显式丢弃
     "代表颜色": None,
     "繁体标题": None,
     "标题": None,
-    "生日": None,    # dongli 特有，留 v2
-    "外文名": None,  # 同上
+    "姓名": None,    # = H1，冗余
 }
 
 LIST_FIELDS = {"武学", "武器", "所有物", "咒术", "别名", "组织门派", "登场作品"}
@@ -108,11 +129,14 @@ def strip_annotation(s: str) -> str:
 
 
 # 早期 AI reformat 留下的占位符/噪声词黑名单
-NOISE_NAMES = {"杂学", "无", "无人", "不详", "未知", "其他", "等", "...", "—"}
+NOISE_NAMES = {"杂学", "邪魔", "道", "无", "无人", "不详", "未知", "其他", "等", "...", "—"}
 
 
-def split_list(val: str, max_item_len: int = 30) -> list[str]:
-    """切分 list 字段：按 、，,\n 分割并去重保序，剥括号注释，过滤过长项/噪声。"""
+def split_list(val: str, max_item_len: int = 30, allow_single: bool = False) -> list[str]:
+    """切分 list 字段：按 、，,\n 分割并去重保序，剥括号注释，过滤过长项/噪声。
+
+    allow_single：是否允许单字项。武器（剑/刀/弓）可以；人际（"道"是垃圾）不行。
+    """
     parts = re.split(r"[、，,;；\n]+", val)
     out = []
     seen = set()
@@ -124,7 +148,7 @@ def split_list(val: str, max_item_len: int = 30) -> list[str]:
             continue
         if len(p) > max_item_len:
             continue
-        if len(p) < 2 and not p.isdigit():
+        if len(p) < 2 and not p.isdigit() and not allow_single:
             continue
         if p in NOISE_NAMES:
             continue  # 占位符噪声
@@ -154,7 +178,7 @@ def clean_value(val: str, is_list: bool, max_single_len: int = 200) -> str | lis
     val = val.rstrip("。.；;")
     val = val.strip()
     if is_list:
-        return split_list(val)
+        return split_list(val, allow_single=True)
     val = re.sub(r"\s+", " ", val)
     if len(val) > max_single_len:
         return None  # 过长单值，大概率 parser 误捕整段
@@ -198,6 +222,25 @@ def parse_doc(text: str) -> dict | None:
         k, v = m.group(1), m.group(2).strip()
         if k not in raw_fields:
             raw_fields[k] = v
+
+    # 裸标签：整行 == 已知字段名（无 ** 无 ：），值在下方非空块（最低优先级）
+    _lines = text.split("\n")
+    for idx, _line in enumerate(_lines):
+        name = _line.strip()
+        if name not in FIELD_MAP or name in raw_fields:
+            continue
+        j = idx + 1
+        while j < len(_lines) and not _lines[j].strip():
+            j += 1
+        val_lines = []
+        while j < len(_lines) and _lines[j].strip():
+            s = _lines[j].strip()
+            if s[0] in "#|" or s.startswith("**") or s in FIELD_MAP:
+                break
+            val_lines.append(s)
+            j += 1
+        if val_lines:
+            raw_fields[name] = "\n".join(val_lines)
 
     # 映射到 canonical
     renji: dict[str, list[str]] = OrderedDict()
@@ -258,7 +301,7 @@ def build_frontmatter(姓名: str, fm: dict) -> str:
     ordered["姓名"] = 姓名
     tier_order = [
         # Tier 1
-        "性别", "初登场", "根据地", "退场", "称号", "配音",
+        "性别", "初登场", "根据地", "来自", "退场", "称号", "配音",
         # Tier 2
         "别名", "身份", "诗号",
         # Tier 3
@@ -268,7 +311,7 @@ def build_frontmatter(姓名: str, fm: dict) -> str:
         # Tier 4
         "人际",
         # Tier 6
-        "登场作品", "本尊雕偶师", "编剧", "出场集数",
+        "登场作品", "本尊雕偶师", "编剧", "出场集数", "生日", "外文名",
     ]
     for k in tier_order:
         if k in fm:
