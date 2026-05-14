@@ -1077,3 +1077,72 @@ body {
   border-bottom-style: dashed !important;
   margin-top: 2rem !important;
 }
+
+/* ============================================================
+   角色 Infobox（overrides/partials/infobox.html 渲染）
+   读 YAML frontmatter，浮动在正文右上角
+   ============================================================ */
+.bdx-infobox {
+  float: right;
+  width: 17rem;
+  max-width: 45%;
+  margin: 0.2rem 0 1rem 1.5rem;
+  border: 1px solid var(--bdx-border);
+  border-radius: 10px;
+  background-color: var(--bdx-cream-light);
+  padding: 0.7rem 0.9rem 0.8rem;
+  font-size: 0.74rem;
+  line-height: 1.5;
+}
+
+.bdx-infobox__title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: -0.2px;
+  text-align: center;
+  color: var(--bdx-charcoal);
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.4rem;
+  border-bottom: 1px solid var(--bdx-border);
+}
+
+.bdx-infobox table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0;
+}
+
+.bdx-infobox th,
+.bdx-infobox td {
+  text-align: left;
+  vertical-align: top;
+  padding: 0.2rem 0;
+  border: none;
+}
+
+.bdx-infobox th {
+  width: 4.2em;
+  white-space: nowrap;
+  padding-right: 0.6rem;
+  color: var(--bdx-muted);
+  font-weight: 500;
+}
+
+.bdx-infobox td {
+  color: rgba(28, 28, 28, 0.83);
+  word-break: break-word;
+}
+
+[data-md-color-scheme="slate"] .bdx-infobox td {
+  color: rgba(247, 244, 237, 0.83);
+}
+
+/* 窄屏：取消浮动，铺满 */
+@media screen and (max-width: 44.9em) {
+  .bdx-infobox {
+    float: none;
+    width: 100%;
+    max-width: 100%;
+    margin: 0 0 1.2rem 0;
+  }
+}

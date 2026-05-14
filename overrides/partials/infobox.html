@@ -1,0 +1,33 @@
+{#-
+  角色信息框：读 page.meta（YAML frontmatter）渲染。
+  仅当存在「姓名」时渲染——非角色页（index.md / 剧情页 / 无 frontmatter 的 doc）自动跳过。
+-#}
+{% if page and page.meta and page.meta["姓名"] %}
+  {%- set m = page.meta -%}
+  {%- set scalar_fields = ["性别", "称号", "身份", "种族", "初登场", "退场", "根据地", "诗号", "配音", "出场集数", "本尊雕偶师", "编剧"] -%}
+  {%- set list_fields = ["别名", "组织门派", "武学", "武器", "咒术", "所有物", "登场作品"] -%}
+  <aside class="bdx-infobox">
+    <div class="bdx-infobox__title">{{ m["姓名"] }}</div>
+    <table>
+      {%- for k in scalar_fields -%}
+        {%- set v = m[k] -%}
+        {%- if v -%}
+          <tr><th>{{ k }}</th><td>{% if v is string %}{{ v }}{% else %}{{ v | join("、") }}{% endif %}</td></tr>
+        {%- endif -%}
+      {%- endfor -%}
+      {%- for k in list_fields -%}
+        {%- set v = m[k] -%}
+        {%- if v -%}
+          <tr><th>{{ k }}</th><td>{% if v is string %}{{ v }}{% else %}{{ v | join("、") }}{% endif %}</td></tr>
+        {%- endif -%}
+      {%- endfor -%}
+      {%- if m["人际"] -%}
+        {%- for rel, names in m["人际"].items() -%}
+          {%- if names -%}
+            <tr><th>{{ rel }}</th><td>{% if names is string %}{{ names }}{% else %}{{ names | join("、") }}{% endif %}</td></tr>
+          {%- endif -%}
+        {%- endfor -%}
+      {%- endif -%}
+    </table>
+  </aside>
+{% endif %}

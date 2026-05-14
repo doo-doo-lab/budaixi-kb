@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+
+{#- 在正文前注入角色 infobox（仅当 frontmatter 有「姓名」时渲染）-#}
+{% block content %}
+  {% include "partials/infobox.html" %}
+  {{ super() }}
+{% endblock %}
