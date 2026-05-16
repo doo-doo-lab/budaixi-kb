@@ -49,6 +49,19 @@ SYSTEM_PROMPT = """你是中文百科条目合并助手。我会给你两份关�
 
 任务：把副版的【独有信息】**追加**到主版的尾部，保持主版几乎不动。
 
+# ⚠️⚠️⚠️ 关键：YAML frontmatter 必须完整保留
+
+如果主版以 `---` 开头有 YAML frontmatter 块（开头 `---`，结尾 `---`，中间是 `key: value` 或缩进字段），**必须把整个 frontmatter 块（含开头和结尾的 `---`）原样放在你输出的最前面，所有字段一字不改、不增不减、缩进格式完全保留**。
+
+不能：
+- 删除 frontmatter
+- 把字段移到 markdown 表格里
+- 改字段名（如把 "姓名" 改成 "名称"）
+- 删除任何字段值（包括 list 列表项）
+- 调整缩进格式
+
+frontmatter 之后才是 `# 角色名` H1 标题。
+
 # ⚠️⚠️⚠️ 关键：避免跨源拼接
 
 我会用 16 字滑动窗口检查输出。任何 16 个连续字符如果横跨"主版的句子末尾 + 副版的句子开头"，因为这种字串两份原文里都不存在，会让验证失败。
@@ -69,10 +82,15 @@ SYSTEM_PROMPT = """你是中文百科条目合并助手。我会给你两份关�
 4. 不得删主版的实质内容
 5. 名词、数字、专有名词必须**逐字保留**两份原文里的写法
 6. 不得把副版的句子穿插到主版段落之间（必然产生跨源边界，导致验证失败）
+7. 不得删除或修改主版开头的 YAML frontmatter（如有）。必须完整保留 `---` ... `---` 块作为输出的最前面
 
 # 期望产物结构
 
 ```
+---
+（如果主版有 frontmatter 就完整逐字保留这一块——所有字段、缩进、---  分隔符都原样）
+---
+
 # 角色名（主版的 H1 标题，完整保留）
 
 （主版的 lead 段，完整逐字保留——不要拼接副版的 lead）
@@ -125,9 +143,27 @@ def normalize_for_check(text: str) -> str:
     return text
 
 
-def validate(combined_input: str, output: str) -> tuple[bool, str]:
+def validate(combined_input: str, output: str, primary: str = "") -> tuple[bool, str]:
     if not output or len(output) < 200:
         return False, "输出太短"
+    # frontmatter 保留检查
+    if primary.startswith("---\n"):
+        # 主版有 frontmatter
+        p_end = primary.find("\n---\n", 4)
+        if p_end > 0:
+            primary_fm = primary[:p_end + 5]  # 含两个 ---
+            if not output.startswith("---"):
+                return False, "frontmatter 丢失：输出未以 --- 开头"
+            o_end = output.find("\n---\n", 4)
+            if o_end < 0:
+                return False, "frontmatter 不完整：找不到结尾 ---"
+            output_fm = output[:o_end + 5]
+            # 主 keys 必须都在
+            p_keys = set(re.findall(r"(?m)^([\w]+):", primary_fm))
+            o_keys = set(re.findall(r"(?m)^([\w]+):", output_fm))
+            missing = p_keys - o_keys
+            if missing:
+                return False, f"frontmatter 丢字段: {missing}"
     inp = normalize_for_check(combined_input)
     out = normalize_for_check(output)
     if len(out) < 100:
@@ -151,12 +187,46 @@ def validate(combined_input: str, output: str) -> tuple[bool, str]:
     return True, f"匹配率 {rate:.1%}"
 
 
+def strip_baidu_metadata(baidu: str) -> str:
+    """从副版抽掉只是元数据的行（`- **来源**: URL`、`# {name}`、`### 基本信息表（来自百度页 dl）` 块），
+    LLM 别把它们和正文段落穿插造成 validation 跨源拼接失败。
+
+    `### 基本信息表` 内的字段大多 primary frontmatter 也有，主版不会丢；正文段落里也经常重复。
+    """
+    lines = baidu.splitlines()
+    out_lines: list[str] = []
+    skip_basicinfo = False
+    for line in lines:
+        # 进入 `### 基本信息表` 段，开始跳
+        if line.startswith("### 基本信息表"):
+            skip_basicinfo = True
+            continue
+        if skip_basicinfo:
+            # 跳到下一个 `## ` 或 `### ` 或 `# ` 结束
+            if line.startswith(("## ", "### ", "# ")):
+                skip_basicinfo = False
+                # 此 line 是新章节，要保留 — fall through 处理
+            else:
+                continue
+        # 去掉 `- **来源**:` 行
+        if re.match(r"^\s*-\s*\*\*来源\*\*:", line):
+            continue
+        # 去掉 baidu 文件开头的 `# {name}` H1（主版的 H1 才该保留）
+        if re.match(r"^\s*#\s+\S", line):
+            continue
+        out_lines.append(line)
+    result = "\n".join(out_lines)
+    result = re.sub(r"\n{3,}", "\n\n", result)
+    return result.strip()
+
+
 def call_merge(client: OpenAI, primary: str, baidu: str) -> tuple[str, object]:
+    baidu_clean = strip_baidu_metadata(baidu)
     user_msg = (
         "【主版】（当前 docs 里的内容）\n\n```markdown\n"
         + primary
-        + "\n```\n\n【副版】（新从百度百科抓的）\n\n```markdown\n"
-        + baidu
+        + "\n```\n\n【副版】（新从百度百科抓的，只含正文章节）\n\n```markdown\n"
+        + baidu_clean
         + "\n```\n\n请按系统指令合并。"
     )
     last_err = None
@@ -268,7 +338,7 @@ def main():
             state["failed"][name] = {"ts": int(time.time()), "reason": str(e)}
             continue
 
-        ok, reason = validate(combined, merged)
+        ok, reason = validate(combined, merged, primary)
         if not ok:
             failed += 1
             log(f"[{i}/{len(todo)}] ✗ {name}  {reason}")
