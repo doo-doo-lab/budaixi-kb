@@ -187,11 +187,24 @@ def validate(combined_input: str, output: str, primary: str = "") -> tuple[bool,
     return True, f"匹配率 {rate:.1%}"
 
 
+_INLINE_BASICINFO_FIELDS = (
+    "中文名", "外文名", "别名", "配音", "性别",
+    "登场作品", "首登场", "初登场", "再登场", "退场",
+    "身份", "根据地", "化身", "本尊雕偶师", "雕偶师",
+    "出场集数", "角色编剧", "角色诗号", "组织", "门派",
+    "组织所属", "所属", "称号", "刻偶师", "种族",
+)
+_INLINE_BASICINFO_RE = re.compile(
+    r"^(?:" + "|".join(_INLINE_BASICINFO_FIELDS) + r")[一-鿿·•・「」\(（].*$"
+)
+
+
 def strip_baidu_metadata(baidu: str) -> str:
     """从副版抽掉只是元数据的行（`- **来源**: URL`、`# {name}`、`### 基本信息表（来自百度页 dl）` 块），
-    LLM 别把它们和正文段落穿插造成 validation 跨源拼接失败。
+    以及 inline 形式的基本信息段落（如 `中文名刺爷爷`、`别名火纪天官`、`配音黄文择` ）。
+    LLM 别把这些短元数据段和正文段落穿插造成 validation 跨源拼接失败。
 
-    `### 基本信息表` 内的字段大多 primary frontmatter 也有，主版不会丢；正文段落里也经常重复。
+    basicInfo 内的字段大多 primary frontmatter 也有，主版不会丢；正文段落里也经常重复。
     """
     lines = baidu.splitlines()
     out_lines: list[str] = []
@@ -208,11 +221,15 @@ def strip_baidu_metadata(baidu: str) -> str:
                 # 此 line 是新章节，要保留 — fall through 处理
             else:
                 continue
+        stripped = line.strip()
         # 去掉 `- **来源**:` 行
         if re.match(r"^\s*-\s*\*\*来源\*\*:", line):
             continue
         # 去掉 baidu 文件开头的 `# {name}` H1（主版的 H1 才该保留）
         if re.match(r"^\s*#\s+\S", line):
+            continue
+        # 去掉 inline "中文名XXX" "别名XXX" 这种短元数据行
+        if _INLINE_BASICINFO_RE.match(stripped):
             continue
         out_lines.append(line)
     result = "\n".join(out_lines)
