@@ -25,6 +25,11 @@ ROOT = Path(__file__).resolve().parent.parent
 
 UI_NOISE_LINES = {"播报编辑", "播报", "编辑", "订阅", "有用+1", "讨论", "收藏"}
 
+# 爬虫残留的孤立「阵营/三教」分类标签：单独成行、跟在关系类型标签后、
+# 后面紧跟真正的关系名（如 `杂学\n一剑万生`）。删标签留名字，可证明安全。
+# 注意：只 exact-match 这个白名单，绝不碰关系名（素还真等）/关系类型标签（同伙/部属等）。
+ORPHAN_CATEGORY_TAGS = {"杂学", "邪魔", "诡谲", "道", "儒", "释"}
+
 
 def split_frontmatter(text: str) -> tuple[str, str]:
     if not text.startswith("---\n"):
@@ -42,8 +47,8 @@ def clean_body(body: str) -> str:
     for line in lines:
         s = line.strip()
 
-        # 1. 纯分隔条：一行全是 = （≥3 个），删
-        if re.fullmatch(r"={3,}", s):
+        # 1. 纯分隔条：一行全是 = 或 # （≥3 个），删
+        if re.fullmatch(r"={3,}", s) or re.fullmatch(r"#{3,}", s):
             continue
 
         # 2. ===标题=== → ## 标题
@@ -57,6 +62,14 @@ def clean_body(body: str) -> str:
 
         # 3. baidu UI 噪音整行删
         if s in UI_NOISE_LINES:
+            continue
+
+        # 3b. 孤立阵营/三教分类标签（杂学/邪魔/道/儒/释/诡谲）→ 删（exact-match，留后面的关系名）
+        if s in ORPHAN_CATEGORY_TAGS:
+            continue
+
+        # 3c. 纯数字孤立行（1-3 位，爬虫脚注号/计数残留）→ 删
+        if re.fullmatch(r"\d{1,3}", s):
             continue
 
         # 4. 连续完全重复的非空、非标题行 → 跳过
