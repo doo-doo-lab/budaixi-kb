@@ -35,6 +35,7 @@ _tools/*.log
 _tools/lint_report.md
 
 # AI 整理留下的备份（保留本地，不进 git，不进网站）
+docs/**/.pre_*_backup/
 docs/**/.pre_ai_backup/
 docs/**/.pre_merge_backup/
 docs/**/.pre_yaml_backup/
