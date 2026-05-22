@@ -154,22 +154,37 @@ def normalize_for_check(text: str) -> str:
     return text
 
 
+# basicInfo 字段标签：单行 run-on dump（如「名称X性别男身份Y诗号Z」）的特征。
+# 一个候选句若含 ≥2 个这种标签，判定为字段 dump（非叙事），排除出长句保全检查——
+# 否则 LLM 正确删掉这种 dump 前缀会被误判过度删除。
+_BASICINFO_LABELS = (
+    "名称", "中文名", "性别", "身份", "称号", "诗号", "武器", "武学",
+    "初登场", "再登场", "退场", "根据地", "配音", "别名", "登场作品",
+    "出场集数", "本尊雕偶师", "雕偶师", "外形特征", "角色编剧", "所有物",
+    "组织门派", "组织所属",
+)
+
+
 def extract_long_sentences(body: str) -> list[str]:
     """从正文抽 ≥LONG_SENT_MIN 字的【真叙事句】（归一化后）。用于防过度删除。
 
-    关键：只算「含句末标点 。！？」的散文句子。字段 dump（如「性别\\n\\n男\\n\\n初登场\\n\\n...」）
-    没有句号，归一化后虽长但不是叙事，必须排除——否则 LLM 正确删 dump 反被误判过度删除。
+    关键：只算「含句末标点 。！？」的散文句子，且排除 basicInfo 字段 dump：
+    - 字段 dump 多源拼接，可能 \\n\\n 分隔（按段切就分开），也可能单行 run-on
+      （`名称X性别男身份Y诗号Z某叙事。` 中间无空行无句号）——后者按句切会被
+      整段抓出，需用「含 ≥2 个字段标签」识别并排除。
     """
     b = re.sub(r"<[^>]+>", "", body)
     b = re.sub(r"(?m)^#{1,6}\s+.*$", "", b)  # 去标题
     out = []
-    # 先按空行切段：字段 dump（性别\n\n男\n\n初登场\n\n…）每个值各自成短段，
-    # 跟真叙事段隔开，避免 dump 被打包进相邻叙事句导致误判过度删除。
+    # 先按空行切段：字段 dump 每个值各自成短段，跟真叙事段隔开
     for para in re.split(r"\n\s*\n", b):
         # 段内再按句末标点切句，保留标点跟前句一起
         for seg in re.split(r"(?<=[。！？])", para):
             if not ("。" in seg or "！" in seg or "？" in seg):
-                continue  # 不含句末标点 → 不是叙事散文（是 dump / 列表 / 标签），跳过
+                continue  # 不含句末标点 → 不是叙事散文（dump / 列表 / 标签）
+            # 含 ≥2 个 basicInfo 字段标签 → 是 run-on 字段 dump，非叙事，排除
+            if sum(1 for lab in _BASICINFO_LABELS if lab in seg) >= 2:
+                continue
             norm = normalize_for_check(seg)
             if len(norm) >= LONG_SENT_MIN:
                 out.append(norm)
@@ -260,16 +275,26 @@ def call_reunify(client: OpenAI, doc: str) -> str:
 
 
 def main():
+    global STATE_FILE, LOG_FILE
     ap = argparse.ArgumentParser()
     ap.add_argument("target", help="文件或目录")
     ap.add_argument("--apply", action="store_true")
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--resume", action="store_true", help="跳过已处理")
+    ap.add_argument("--state", default=None, help="独立 state 文件（并行分片用）")
+    ap.add_argument("--shard", default=None, help="分片 i/N，只处理 files[i::N]（并行用）")
     args = ap.parse_args()
 
     if not API_KEY:
         print("[!] 缺 DEEPSEEK_API_KEY 环境变量")
         sys.exit(1)
+
+    # 并行分片：独立 state + log，避免多进程打架
+    if args.state:
+        STATE_FILE = Path(args.state)
+        if not STATE_FILE.is_absolute():
+            STATE_FILE = Path(__file__).resolve().parent / args.state
+        LOG_FILE = STATE_FILE.with_suffix(".log")
 
     target = Path(args.target).resolve()
     if target.is_file():
@@ -283,6 +308,11 @@ def main():
                 for part in f.parts
             )
         ]
+
+    # 分片：i/N → 只取 files[i::N]
+    if args.shard:
+        i, n = (int(x) for x in args.shard.split("/"))
+        files = files[i::n]
 
     state = load_state()
     todo = []
