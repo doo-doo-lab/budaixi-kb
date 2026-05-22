@@ -163,13 +163,16 @@ def extract_long_sentences(body: str) -> list[str]:
     b = re.sub(r"<[^>]+>", "", body)
     b = re.sub(r"(?m)^#{1,6}\s+.*$", "", b)  # 去标题
     out = []
-    # 在句末标点处切分，保留标点跟前句一起
-    for seg in re.split(r"(?<=[。！？])", b):
-        if not ("。" in seg or "！" in seg or "？" in seg):
-            continue  # 不含句末标点 → 不是叙事散文（是 dump / 列表 / 标签），跳过
-        norm = normalize_for_check(seg)
-        if len(norm) >= LONG_SENT_MIN:
-            out.append(norm)
+    # 先按空行切段：字段 dump（性别\n\n男\n\n初登场\n\n…）每个值各自成短段，
+    # 跟真叙事段隔开，避免 dump 被打包进相邻叙事句导致误判过度删除。
+    for para in re.split(r"\n\s*\n", b):
+        # 段内再按句末标点切句，保留标点跟前句一起
+        for seg in re.split(r"(?<=[。！？])", para):
+            if not ("。" in seg or "！" in seg or "？" in seg):
+                continue  # 不含句末标点 → 不是叙事散文（是 dump / 列表 / 标签），跳过
+            norm = normalize_for_check(seg)
+            if len(norm) >= LONG_SENT_MIN:
+                out.append(norm)
     return out
 
 
