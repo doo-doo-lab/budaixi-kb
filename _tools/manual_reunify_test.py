@@ -310,10 +310,17 @@ def reunify_generic(orig: str) -> str:
                 and not lines[i+1].strip()
                 and lines[i+2].strip()
                 and not lines[i+3].strip()):
-                # 删 4 行（label/blank/value/blank）
-                i += 4
-                deletions += 1
-                continue
+                value = lines[i+2].strip()
+                # ⚠️ 覆盖检查：value 的每个 item（顿号/逗号分割）必须在 orig 全文
+                # 出现 ≥2 次（即删掉这段后，别处——frontmatter 或主体——仍保留该信息）。
+                # 否则这是「body 独有、frontmatter 没提取」的值，删了就丢，必须保留。
+                items = [x.strip() for x in re.split(r"[、，,；;]", value) if x.strip()]
+                if items and all(orig.count(it) >= 2 for it in items):
+                    # 纯冗余，安全删 4 行（label/blank/value/blank）
+                    i += 4
+                    deletions += 1
+                    continue
+                # 否则 value 含独有信息 → 保留整段，不删
         out.append(line)
         i += 1
     new_body = "\n".join(out)
