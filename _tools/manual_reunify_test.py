@@ -185,15 +185,44 @@ def reunify_yiyeshu(orig: str) -> str:
     return "\n".join(keep) + "\n"
 
 
+def reunify_qiaorulai(orig: str) -> str:
+    """俏如来 — 新闻百科 newton 段大半是独有叙事，不能整段删。
+    只删明显 meta 噪音：那行 section 名串、基本介绍 dump 行。"""
+    lines = orig.split("\n")
+    out = []
+    for i, l in enumerate(lines):
+        # 噪音 1: 整行就是 section 名列表（含 ≥6 个逗号分隔的「中文章节名」）
+        s = l.strip()
+        if "," in s and s.count(",") >= 5:
+            parts = [p.strip() for p in s.split(",") if p.strip()]
+            # 全部 ≤6 个汉字 + 无空格 + 无叙事标点
+            if len(parts) >= 6 and all(len(p) <= 6 and "：" not in p and "。" not in p and " " not in p for p in parts):
+                # 像是 "角色设定,人物关系,能力设定,武学,武器,阵法,..."
+                continue
+        # 噪音 2: "基本介绍\n中文名:..配音:..性别:..." 单行 metadata 集合
+        # 简化跳过
+        out.append(l)
+    return "\n".join(out).rstrip() + "\n"
+
+
 REUNIFIERS = {
     "槐破梦": reunify_huaipomeng,
     "素还真": reunify_suhuanzhen,
     "一页书": reunify_yiyeshu,
+    "俏如来": reunify_qiaorulai,
 }
 
 
 def run(name: str):
-    src = Path(f"docs/角色/pili/{name}.md")
+    src = None
+    for sub in ("pili", "jinguang", "dongli"):
+        p = Path(f"docs/角色/{sub}/{name}.md")
+        if p.exists():
+            src = p
+            break
+    if src is None:
+        print(f"[{name}] 找不到文件")
+        return False
     orig = src.read_text(encoding="utf-8")
     fn = REUNIFIERS[name]
     new = fn(orig)
