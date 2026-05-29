@@ -271,12 +271,73 @@ def reunify_yexiaochai(orig: str) -> str:
     return "\n".join(keep) + "\n"
 
 
+def reunify_generic(orig: str) -> str:
+    """通用 surgical reunify。
+
+    扫 body，匹配 `**field**\\n\\nvalue\\n\\n` 或 `field\\n\\nvalue\\n\\n` 模式
+    （field 是 frontmatter 顶层 key 的中文等价），整段删。
+    其他内容（化身/口头禅/代表颜色/swatch/诗号/独有信息）全部保留。
+    """
+    fm, body = split_frontmatter_local(orig)
+    # frontmatter 顶层 key（中文）
+    fm_keys = set(re.findall(r"(?m)^([一-鿿\w]+):", fm))
+    # 加常见同义词（dump 行经常用这些）
+    dump_labels = set(fm_keys) | {
+        "性别", "初登场", "退场", "称号", "根据地", "身份", "武学", "武器",
+        "所有物", "诗号", "登场作品", "门派", "组织", "来自", "种族", "雕偶师",
+        "本尊雕偶师", "本名", "字号", "配音", "声优", "出场集数",
+    }
+
+    lines = body.split("\n")
+    out = []
+    i = 0
+    deletions = 0
+    while i < len(lines):
+        line = lines[i]
+        stripped = line.strip()
+        # 检查是不是 **field** 或 field 形式的 dump 标签
+        # 模式: 当前行是 `**X**` 或 `X`（短中文标签），下一行空，再下一行有值，再下一行空
+        label = None
+        m = re.fullmatch(r"\*\*([一-鿿]{2,6})\*\*", stripped)
+        if m:
+            label = m.group(1)
+        elif re.fullmatch(r"[一-鿿]{2,6}", stripped):
+            # 裸标签（如 `身份` 单独成行）
+            label = stripped
+        if label and label in dump_labels:
+            # 看下一行是否空，再下一行是值，再下一行是空
+            if (i + 3 < len(lines)
+                and not lines[i+1].strip()
+                and lines[i+2].strip()
+                and not lines[i+3].strip()):
+                # 删 4 行（label/blank/value/blank）
+                i += 4
+                deletions += 1
+                continue
+        out.append(line)
+        i += 1
+    new_body = "\n".join(out)
+    # 压多空行
+    new_body = re.sub(r"\n{3,}", "\n\n", new_body)
+    return (fm + new_body if fm else new_body).rstrip() + "\n"
+
+
+def split_frontmatter_local(text: str) -> tuple[str, str]:
+    if not text.startswith("---\n"):
+        return "", text
+    end = text.find("\n---\n", 4)
+    if end < 0:
+        return "", text
+    return text[: end + 5], text[end + 5:]
+
+
 REUNIFIERS = {
     "槐破梦": reunify_huaipomeng,
     "素还真": reunify_suhuanzhen,
     "一页书": reunify_yiyeshu,
     "俏如来": reunify_qiaorulai,
     "叶小钗": reunify_yexiaochai,
+    "_generic": reunify_generic,
 }
 
 
@@ -291,7 +352,7 @@ def run(name: str):
         print(f"[{name}] 找不到文件")
         return False
     orig = src.read_text(encoding="utf-8")
-    fn = REUNIFIERS[name]
+    fn = REUNIFIERS.get(name, REUNIFIERS["_generic"])
     new = fn(orig)
 
     preview_dir = Path("_tools/reunify_preview")
