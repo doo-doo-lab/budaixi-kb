@@ -53,22 +53,102 @@ def reunify_huaipomeng(orig: str) -> str:
     return "\n".join(keep) + "\n"
 
 
-def main():
-    src = Path("docs/角色/pili/槐破梦.md")
+def reunify_suhuanzhen(orig: str) -> str:
+    """素还真 — 删 ## 【补充来源】 下的多组 dump，保留 swatch + 机关阵法 + 著作 + 其他事项诗号 + 人物关系."""
+    lines = orig.split("\n")
+    # 补充来源 H2
+    h2_idx = next(i for i, l in enumerate(lines) if l.startswith("## 【补充来源:霹雳官网"))
+    # 补充来源 下的 ## 角色背景 / ## 技能专长 / ## 武器
+    bg_idx = next(i for i, l in enumerate(lines[h2_idx:], h2_idx) if l == "## 角色背景")
+    skill_idx = next(i for i, l in enumerate(lines[bg_idx:], bg_idx) if l == "## 技能专长")
+    weapon_idx = next(i for i, l in enumerate(lines[skill_idx:], skill_idx) if l == "## 武器")
+    rel_idx = next(i for i, l in enumerate(lines[weapon_idx:], weapon_idx) if l == "## 人物关系")
+
+    # 提 swatch 块（角色背景 范围内）
+    swatch_lines = [l for l in lines[bg_idx:skill_idx] if "bdx-swatch" in l]
+
+    # ## 技能专长 段（skill_idx..weapon_idx）：武学 dump 删，机关阵法 留
+    skill_seg = lines[skill_idx:weapon_idx]
+    # 找 "机关阵法" 标签起点（在 skill_seg 内）
+    kept_skill = ["## 技能专长", ""]
+    if "机关阵法" in skill_seg:
+        ji_i = skill_seg.index("机关阵法")
+        # 后续行（标签后空行 + 阵法 list 行）直到段末
+        kept_skill.append("机关阵法")
+        kept_skill.append("")
+        for l in skill_seg[ji_i+1:]:
+            if l.strip() and l != "机关阵法":
+                kept_skill.append(l)
+        kept_skill.append("")
+
+    # ## 武器 段（weapon_idx..rel_idx）：武器 dump 删，著作 留，所有物 删
+    weapon_seg = lines[weapon_idx:rel_idx]
+    kept_weapon = ["## 武器", ""]
+    # 找 "著作" 起点 + 它的内容（到下一个空标签/段尾）
+    if "著作" in weapon_seg:
+        zhu_i = weapon_seg.index("著作")
+        kept_weapon.append("著作")
+        kept_weapon.append("")
+        # 著作 后续行（直到遇到下一个非空非内容标签 "所有物" 或 "其他事项" 或段末）
+        for j in range(zhu_i+1, len(weapon_seg)):
+            ls = weapon_seg[j].strip()
+            if ls in ("所有物", "其他事项", "其他纪录"):
+                break
+            if ls:
+                kept_weapon.append(weapon_seg[j])
+        kept_weapon.append("")
+        # 之后还有 "其他事项" 这个标签下的诗号（在 weapon_seg 内）—— 一律保留
+        for j in range(zhu_i+1, len(weapon_seg)):
+            ls = weapon_seg[j].strip()
+            if ls == "其他事项":
+                # 从这一行起到段末全部保留
+                kept_weapon.append("")
+                kept_weapon.extend(weapon_seg[j:])
+                break
+
+    # 拼装
+    keep = lines[:bg_idx]  # L1 到 ## 角色背景 之前（含 ## 【补充来源】H2 + URL + 繁体标题 + lead）
+    keep.append("")
+    keep.append("**代表颜色**")
+    keep.append("")
+    keep.extend(swatch_lines)
+    keep.append("")
+    keep.extend(kept_skill)
+    keep.extend(kept_weapon)
+    keep.append("")
+    keep.extend(lines[rel_idx:])  # ## 人物关系 全段
+
+    # 去尾空行
+    while keep and not keep[-1].strip():
+        keep.pop()
+    return "\n".join(keep) + "\n"
+
+
+REUNIFIERS = {
+    "槐破梦": reunify_huaipomeng,
+    "素还真": reunify_suhuanzhen,
+}
+
+
+def run(name: str):
+    src = Path(f"docs/角色/pili/{name}.md")
     orig = src.read_text(encoding="utf-8")
-    new = reunify_huaipomeng(orig)
+    fn = REUNIFIERS[name]
+    new = fn(orig)
 
     preview_dir = Path("_tools/reunify_preview")
     preview_dir.mkdir(exist_ok=True)
-    out_path = preview_dir / "槐破梦.md"
+    out_path = preview_dir / f"{name}.md"
     out_path.write_text(new, encoding="utf-8")
 
-    print(f"原文: {len(orig)} 字 / 输出: {len(new)} 字 / 删: {len(orig)-len(new)} ({(len(orig)-len(new))/len(orig)*100:.1f}%)")
-
+    print(f"[{name}] 原文: {len(orig)} 字 / 输出: {len(new)} 字 / 删: {len(orig)-len(new)} ({(len(orig)-len(new))/len(orig)*100:.1f}%)")
     ok, reason = validate(orig, new)
-    print(f"校验: {'✓ PASS' if ok else '✗ FAIL'} — {reason}")
-    print(f"\n预览路径: {out_path}")
+    print(f"  校验: {'✓ PASS' if ok else '✗ FAIL'} — {reason}")
+    return ok
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    targets = sys.argv[1:] if len(sys.argv) > 1 else list(REUNIFIERS.keys())
+    for name in targets:
+        run(name)
