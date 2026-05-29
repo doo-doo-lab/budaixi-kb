@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""reunify 前的确定性预清洗。只删【可证明安全】的噪音，绝不碰数据。
+"""reunify 前 / 后的确定性预清洗。只删【可证明安全】的噪音，绝不碰数据。
 
 处理：
 1. 纯分隔条（一行全是 = 号，如 `========...`）→ 删
@@ -7,6 +7,8 @@
 3. 残留 baidu UI：整行 `播报编辑` / `播报` / `编辑` / `订阅` / `有用+1` → 删
 4. 连续完全重复的非空行（非标题）→ 保留第一行删后续
 5. 3+ 连续空行 → 压成 1 个空行
+6. (v3) 空 `**X**` 标题（后跟下一个 `## ` 或文件尾，中间只有空白）→ 删
+7. (v3) 空 H2/H3 标题（同上，常见于 reunify 后留下的 `## 【补充来源:...】` 空壳）→ 删
 
 **不碰**：swatch HTML（`<span class="bdx-swatch">` 是 B 系列特意加的显示数据）、
 `杂学`/`邪魔`/`诡谲` 等关系分类标签、frontmatter、任何叙事/列表内容。
@@ -82,6 +84,29 @@ def clean_body(body: str) -> str:
 
     text = "\n".join(out)
     # 5. 3+ 空行压成 1
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    # 6. 空 **X** 标题：**X** 之后只有空白直到下个 ## / ### 或文件尾 → 删整段
+    # 反复直到不变（处理连串空标题）
+    bold_pat = re.compile(r"^\*\*[^*\n]+\*\*\s*\n(?:\s*\n)*(?=##? |\Z)", re.M)
+    prev = None
+    while text != prev:
+        prev = text
+        text = bold_pat.sub("", text)
+    # 7a. 空 H2: ## X 后只有空白直到下个【同级 ## 】或 EOF。
+    # 关键：lookahead 必须是 `## ` (恰好 2 个 #)，不能匹配 `### `——
+    # 因为 ### Y 是 ## X 的子节，## X 不算空。
+    h2_pat = re.compile(r"^## [^\n]+\n(?:\s*\n)*(?=## |\Z)", re.M)
+    prev = None
+    while text != prev:
+        prev = text
+        text = h2_pat.sub("", text)
+    # 7b. 空 H3: ### X 后只有空白直到 ## 或 ### 或 EOF（H3 是叶子，没有 H4 子节）
+    h3_pat = re.compile(r"^### [^\n]+\n(?:\s*\n)*(?=#{2,3} |\Z)", re.M)
+    prev = None
+    while text != prev:
+        prev = text
+        text = h3_pat.sub("", text)
+    # 再压一次空行
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text
 
