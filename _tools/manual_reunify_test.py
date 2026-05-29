@@ -205,11 +205,78 @@ def reunify_qiaorulai(orig: str) -> str:
     return "\n".join(out).rstrip() + "\n"
 
 
+def reunify_yexiaochai(orig: str) -> str:
+    """叶小钗 — ## 【补充来源】 下 H2 子段，留化身/swatch/机关阵法/发明/人物关系."""
+    lines = orig.split("\n")
+    h2_idx = next(i for i, l in enumerate(lines) if l.startswith("## 【补充来源:霹雳官网"))
+    bg_idx = next(i for i, l in enumerate(lines[h2_idx:], h2_idx) if l == "## 角色背景")
+    skill_idx = next(i for i, l in enumerate(lines[bg_idx:], bg_idx) if l == "## 技能专长")
+    weapon_idx = next(i for i, l in enumerate(lines[skill_idx:], skill_idx) if l == "## 武器")
+    rel_idx = next(i for i, l in enumerate(lines[weapon_idx:], weapon_idx) if l == "## 人物关系")
+
+    bg_seg = lines[bg_idx:skill_idx]
+    # 化身块：从 "化身" 标签到 "**代表颜色**" 前
+    huashen_start = next((i for i, l in enumerate(bg_seg)
+                          if l in ("化身", "**化身**")), None)
+    swatch_label_idx = next((i for i, l in enumerate(bg_seg) if l == "**代表颜色**"), None)
+    huashen_block = []
+    if huashen_start is not None and swatch_label_idx is not None and huashen_start < swatch_label_idx:
+        huashen_block = bg_seg[huashen_start:swatch_label_idx]
+    swatch_lines = [l for l in bg_seg if "bdx-swatch" in l]
+
+    # 技能专长：留机关阵法
+    skill_seg = lines[skill_idx:weapon_idx]
+    kept_skill = ["## 技能专长", ""]
+    ji_label = next((l for l in ("**机关阵法**", "机关阵法") if l in skill_seg), None)
+    if ji_label:
+        ji_i = skill_seg.index(ji_label)
+        kept_skill.append(ji_label)
+        kept_skill.append("")
+        for l in skill_seg[ji_i+1:]:
+            if l.strip():
+                kept_skill.append(l)
+        kept_skill.append("")
+
+    # 武器：留 发明/创造 + 其他事项 之后
+    weapon_seg = lines[weapon_idx:rel_idx]
+    kept_weapon = ["## 武器", ""]
+    fa_label = next((l for l in ("发明/创造", "**发明/创造**", "发明") if l in weapon_seg), None)
+    if fa_label:
+        fa_i = weapon_seg.index(fa_label)
+        kept_weapon.append(fa_label)
+        kept_weapon.append("")
+        for l in weapon_seg[fa_i+1:]:
+            if l.strip() in ("其他事项", "**其他事项**"):
+                break
+            if l.strip():
+                kept_weapon.append(l)
+        kept_weapon.append("")
+
+    keep = lines[:bg_idx]
+    if huashen_block:
+        keep.append("")
+        keep.extend(huashen_block)
+    keep.append("")
+    keep.append("**代表颜色**")
+    keep.append("")
+    keep.extend(swatch_lines)
+    keep.append("")
+    keep.extend(kept_skill)
+    keep.extend(kept_weapon)
+    keep.append("")
+    keep.extend(lines[rel_idx:])
+
+    while keep and not keep[-1].strip():
+        keep.pop()
+    return "\n".join(keep) + "\n"
+
+
 REUNIFIERS = {
     "槐破梦": reunify_huaipomeng,
     "素还真": reunify_suhuanzhen,
     "一页书": reunify_yiyeshu,
     "俏如来": reunify_qiaorulai,
+    "叶小钗": reunify_yexiaochai,
 }
 
 
