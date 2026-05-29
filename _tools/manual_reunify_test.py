@@ -124,9 +124,71 @@ def reunify_suhuanzhen(orig: str) -> str:
     return "\n".join(keep) + "\n"
 
 
+def reunify_yiyeshu(orig: str) -> str:
+    """一页书 — 删 ## 【补充来源】下 H2 子段的 dump，保留化身/swatch/机关阵法/著作/座骑/其他事项诗号/人物关系."""
+    lines = orig.split("\n")
+    h2_idx = next(i for i, l in enumerate(lines) if l.startswith("## 【补充来源:霹雳官网"))
+    bg_idx = next(i for i, l in enumerate(lines[h2_idx:], h2_idx) if l == "## 角色背景")
+    skill_idx = next(i for i, l in enumerate(lines[bg_idx:], bg_idx) if l == "## 技能专长")
+    hold_idx = next(i for i, l in enumerate(lines[skill_idx:], skill_idx) if l == "## 所持有物")
+    rel_idx = next(i for i, l in enumerate(lines[hold_idx:], hold_idx) if l == "## 人物关系")
+
+    # ## 角色背景 段：保留 **化身** + swatch；删 性别/初登场/称号/根据地/身份/名言/诗词
+    bg_seg = lines[bg_idx:skill_idx]
+    # 找 **化身** 起点 + 后续 6 化身名（到 **代表颜色** 前）
+    huashen_start = next(i for i, l in enumerate(bg_seg) if l == "**化身**")
+    swatch_label_idx = next(i for i, l in enumerate(bg_seg) if l == "**代表颜色**")
+    huashen_block = bg_seg[huashen_start:swatch_label_idx]  # 含 **化身** 标签 + 名字
+    swatch_lines = [l for l in bg_seg if "bdx-swatch" in l]
+
+    # ## 技能专长 段：删 武学，留 机关阵法
+    skill_seg = lines[skill_idx:hold_idx]
+    kept_skill = ["## 技能专长", ""]
+    if "**机关阵法**" in skill_seg:
+        ji_i = skill_seg.index("**机关阵法**")
+        kept_skill.append("**机关阵法**")
+        kept_skill.append("")
+        for l in skill_seg[ji_i+1:]:
+            if l.strip():
+                kept_skill.append(l)
+        kept_skill.append("")
+
+    # ## 所持有物 段：删 武器/所有物，留 著作/交通(座骑)/其他事项 之后所有
+    hold_seg = lines[hold_idx:rel_idx]
+    kept_hold = ["## 所持有物", ""]
+    # 找 **著作** 起点 → 一直保留到段末
+    if "**著作**" in hold_seg:
+        zhu_i = hold_seg.index("**著作**")
+        kept_hold.extend(hold_seg[zhu_i:])
+        # 去内嵌 **武器** **所有物** 段（如果在 著作 之后还有的话——通常不会）
+    # 否则若无著作，从 交通(座骑) 起点开始也行
+    elif any("交通" in l or "座骑" in l for l in hold_seg):
+        jt_i = next(i for i, l in enumerate(hold_seg) if "交通" in l or "座骑" in l)
+        kept_hold.extend(hold_seg[jt_i:])
+
+    keep = lines[:bg_idx]
+    # 保留化身 + swatch
+    keep.append("")
+    keep.extend(huashen_block)
+    keep.append("")
+    keep.append("**代表颜色**")
+    keep.append("")
+    keep.extend(swatch_lines)
+    keep.append("")
+    keep.extend(kept_skill)
+    keep.extend(kept_hold)
+    keep.append("")
+    keep.extend(lines[rel_idx:])
+
+    while keep and not keep[-1].strip():
+        keep.pop()
+    return "\n".join(keep) + "\n"
+
+
 REUNIFIERS = {
     "槐破梦": reunify_huaipomeng,
     "素还真": reunify_suhuanzhen,
+    "一页书": reunify_yiyeshu,
 }
 
 
