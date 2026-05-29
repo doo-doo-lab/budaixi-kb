@@ -321,6 +321,17 @@ def reunify_generic(orig: str) -> str:
                     deletions += 1
                     continue
                 # 否则 value 含独有信息 → 保留整段，不删
+
+        # 行内 dump 格式: `- **字段**：值`（倦收天/照世明灯式霹雳官网源）
+        m_inline = re.match(r"^\s*-\s*\*\*([一-鿿/·]{2,8})\*\*\s*[：:]\s*(.+\S)\s*$", line)
+        if m_inline and m_inline.group(1) in dump_labels:
+            value = m_inline.group(2).strip()
+            items = [x.strip() for x in re.split(r"[、，,；;]", value) if x.strip()]
+            if items and all(orig.count(it) >= 2 for it in items):
+                # 行内纯冗余，删这一行
+                i += 1
+                deletions += 1
+                continue
         out.append(line)
         i += 1
     new_body = "\n".join(out)
